@@ -140,6 +140,10 @@ private:
 	bool				VrThreadSynced;
 	bool				ReadyToExit;				// start exit procedure
 	bool				Resumed;
+	bool				isOnSecondVideo;
+	bool				firstSent;
+	bool				secondSent;
+	bool				thirdSent;
 
 	VrAppInterface *	appInterface;
 

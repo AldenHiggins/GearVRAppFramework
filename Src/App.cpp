@@ -1188,6 +1188,8 @@ void AppLocal::FrameworkInputProcessing( const VrInput & input )
 		const int repeatCount = input.KeyEvents[i].RepeatCount;
 		const KeyEventType eventType = input.KeyEvents[i].EventType;
 
+		LOG("Input is happening here");
+
 		// Give debug console a chance next.
 		if ( DebugConsole::OnKeyEvent( keyCode, repeatCount, eventType ) )
 		{
@@ -1342,13 +1344,110 @@ void * AppLocal::VrThreadFunction()
 			InputEvents.NumKeyEvents = 0;
 		}
 
+		// Alden added this
+		ovrFrameInput printInput = TheVrFrame.Get();
+
+		ovrQuatf ovrQuat = printInput.Tracking.HeadPose.Pose.Orientation;
+		Quat<float> rotationQuat = Quat<float>(ovrQuat.x, ovrQuat.y, ovrQuat.z, ovrQuat.w);
+		Vector3f startingForward;
+		startingForward.z = 1.0f;
+		Vector3f rotatedForwardVector = rotationQuat.Rotate(startingForward);
+
+		// LOG("Rotated forward, X: %f Y: %f Z: %f", rotatedForwardVector.x, rotatedForwardVector.y, rotatedForwardVector.z);
+
+		float dotProduct = rotatedForwardVector.Dot(startingForward);
+
+		// LOG("APPLOCAL, dot product: %f", dotProduct);
+
+	// 		bool				firstSent;
+	// bool				secondSent;
+	// bool				thirdSent;
+
+		if (!isOnSecondVideo)
+		{
+			if (dotProduct < 0.0f)
+			{
+				LOG("SWITCHING TO SECOND VID");
+				if (!firstSent)
+				{
+					firstSent = true;
+					printInput.Input.KeyEvents[printInput.Input.NumKeyEvents].KeyCode = (ovrKeyCode) 144;
+					printInput.Input.KeyEvents[printInput.Input.NumKeyEvents].RepeatCount = 0;
+					printInput.Input.KeyEvents[printInput.Input.NumKeyEvents].EventType = (KeyEventType) 4;
+					printInput.Input.NumKeyEvents++;
+				}
+				else if(!secondSent)
+				{
+					secondSent = true;
+					printInput.Input.KeyEvents[printInput.Input.NumKeyEvents].KeyCode = (ovrKeyCode) 144;
+					printInput.Input.KeyEvents[printInput.Input.NumKeyEvents].RepeatCount = 0;
+					printInput.Input.KeyEvents[printInput.Input.NumKeyEvents].EventType = (KeyEventType) 3;
+					printInput.Input.NumKeyEvents++;
+				}
+				else if(!thirdSent)
+				{
+					printInput.Input.KeyEvents[printInput.Input.NumKeyEvents].KeyCode = (ovrKeyCode) 144;
+					printInput.Input.KeyEvents[printInput.Input.NumKeyEvents].RepeatCount = 0;
+					printInput.Input.KeyEvents[printInput.Input.NumKeyEvents].EventType = (KeyEventType) 4;
+					printInput.Input.NumKeyEvents++;
+					isOnSecondVideo = true;
+					firstSent = false;
+					secondSent = false;
+				}
+
+
+				
+
+				
+
+				// TheVrFrame.Get().Input.KeyEvents[TheVrFrame.Get().Input.NumKeyEvents].KeyCode = (ovrKeyCode) 144;
+				// TheVrFrame.Get().Input.KeyEvents[TheVrFrame.Get().Input.NumKeyEvents].RepeatCount = 0;
+				// TheVrFrame.Get().Input.KeyEvents[TheVrFrame.Get().Input.NumKeyEvents].EventType = (KeyEventType) 3;
+				// TheVrFrame.Get().Input.NumKeyEvents++;
+
+				// TheVrFrame.Get().Input.KeyEvents[TheVrFrame.Get().Input.NumKeyEvents].KeyCode = (ovrKeyCode) 144;
+				// TheVrFrame.Get().Input.KeyEvents[TheVrFrame.Get().Input.NumKeyEvents].RepeatCount = 0;
+				// TheVrFrame.Get().Input.KeyEvents[TheVrFrame.Get().Input.NumKeyEvents].EventType = (KeyEventType) 4;
+				// TheVrFrame.Get().Input.NumKeyEvents++;
+				// isOnSecondVideo = true;
+			}
+		}
+		else
+		{
+			if (dotProduct >= 0.0f)
+			{
+				LOG("SWITCHING TO FIRST VID");
+				printInput.Input.KeyEvents[printInput.Input.NumKeyEvents].KeyCode = (ovrKeyCode) 144;
+				printInput.Input.KeyEvents[printInput.Input.NumKeyEvents].RepeatCount = 0;
+				printInput.Input.KeyEvents[printInput.Input.NumKeyEvents].EventType = (KeyEventType) 4;
+				printInput.Input.NumKeyEvents++;
+				isOnSecondVideo = false;
+			}
+		}
+
+
+
+		// Process key events.
+		for ( int i = 0; i < printInput.Input.NumKeyEvents; i++ )
+		{
+			const int keyCode = printInput.Input.KeyEvents[i].KeyCode;
+			const int repeatCount = printInput.Input.KeyEvents[i].RepeatCount;
+			const KeyEventType eventType = printInput.Input.KeyEvents[i].EventType;
+
+			LOG("KEY DETECTED");
+			LOG("Keycode: %i", keyCode);
+			LOG("Key event type: %i", eventType);
+			LOG("Key repeat: %i", repeatCount);
+		}
+
+
 		// Resend any debug lines that have expired.
 		GetDebugLines().BeginFrame( TheVrFrame.Get().FrameNumber );
 
 		// Process input.
 		{
 			OVR_PERF_TIMER( VrThreadFunction_Loop_FrameworkInputProcessing );
-			FrameworkInputProcessing( TheVrFrame.Get().Input );
+			FrameworkInputProcessing( printInput.Input );
 		}
 
 		// Process Window Events.
